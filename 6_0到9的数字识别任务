@@ -1,0 +1,295 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyOGy25XktOo3ebFlfRo7+ew",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/eeeewyz/Pytorch/blob/main/6_0%E5%88%B09%E7%9A%84%E6%95%B0%E5%AD%97%E8%AF%86%E5%88%AB%E4%BB%BB%E5%8A%A1\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 1,
+      "metadata": {
+        "id": "pqUPc9SchNYj"
+      },
+      "outputs": [],
+      "source": [
+        "import torch\n",
+        "import torch.nn as nn\n",
+        "import torch.optim as optim\n",
+        "import torchvision\n",
+        "import torchvision.transforms as transforms\n",
+        "from torch.utils.data import DataLoader"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 数据预处理\n",
+        "transform = transforms.Compose([\n",
+        "    transforms.ToTensor(),\n",
+        "    transforms.Normalize((0.1307,), (0.3081,))\n",
+        "])"
+      ],
+      "metadata": {
+        "id": "cGM9Z6BziHtJ"
+      },
+      "execution_count": 4,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 加载 MNIST 数据集\n",
+        "train_dataset = torchvision.datasets.MNIST(\n",
+        "    root=\"./data\",\n",
+        "    train=True,\n",
+        "    download=True,\n",
+        "    transform=transform\n",
+        ")\n",
+        "\n",
+        "test_dataset = torchvision.datasets.MNIST(\n",
+        "    root=\"./data\",\n",
+        "    train=False,\n",
+        "    download=True,\n",
+        "    transform=transform\n",
+        ")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "e29P6ICwjDxf",
+        "outputId": "ed1a81d9-55d6-4b00-f613-00d36a59490a"
+      },
+      "execution_count": 5,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "100%|██████████| 9.91M/9.91M [00:05<00:00, 1.86MB/s]\n",
+            "100%|██████████| 28.9k/28.9k [00:00<00:00, 484kB/s]\n",
+            "100%|██████████| 1.65M/1.65M [00:00<00:00, 4.48MB/s]\n",
+            "100%|██████████| 4.54k/4.54k [00:00<00:00, 9.32MB/s]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#create dataset\n",
+        "train_loader=DataLoader(train_dataset,batch_size=32,shuffle=True)\n",
+        "test_loader=DataLoader(test_dataset,batch_size=1000,shuffle=False)"
+      ],
+      "metadata": {
+        "id": "0uzmP1tPjkqi"
+      },
+      "execution_count": 17,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#creat NN\n",
+        "class image_classifier(nn.Module):\n",
+        "    def __init__(self):\n",
+        "        super().__init__()\n",
+        "        self.flatten=nn.Flatten()\n",
+        "        self.layers=nn.Sequential(\n",
+        "            nn.Linear(28*28,128),\n",
+        "            nn.ReLU(),\n",
+        "            nn.Linear(128,10),\n",
+        "        )\n",
+        "\n",
+        "    def forward(self,x):\n",
+        "        x=self.flatten(x)\n",
+        "        x=self.layers(x)\n",
+        "        return x"
+      ],
+      "metadata": {
+        "id": "RxVfK91mshY9"
+      },
+      "execution_count": 8,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#device and optimizer\n",
+        "device=torch.device(\"cuda\" if torch.cuda.is_available() else \"cpu\")\n",
+        "model=image_classifier().to(device)\n",
+        "optimizer=optim.Adam(model.parameters(),lr=0.001)"
+      ],
+      "metadata": {
+        "id": "1L6zMSotseey"
+      },
+      "execution_count": 9,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "cf4469f6"
+      },
+      "source": [
+        "# 定义损失函数\n",
+        "loss_fn = nn.CrossEntropyLoss()"
+      ],
+      "execution_count": 16,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#创建一个函数进行一个epoch的计算\n",
+        "def train_epoch(model,train_loader,optimizer,loss_fn,device):\n",
+        "    model.train()\n",
+        "    running_loss = 0.0 # Corrected initialization for running loss\n",
+        "    correct = 0\n",
+        "    total = 0\n",
+        "\n",
+        "    for batch_idx,(data,target) in enumerate(train_loader):\n",
+        "        data,target=data.to(device),target.to(device)\n",
+        "\n",
+        "        optimizer.zero_grad()\n",
+        "        output=model(data)\n",
+        "        loss=loss_fn(output,target)\n",
+        "        loss.backward()\n",
+        "        optimizer.step()\n",
+        "\n",
+        "        # Accumulate loss and correct predictions for the entire epoch\n",
+        "        running_loss += loss.item() * data.size(0) # Sum of loss for each sample in the batch\n",
+        "        _, predicted = torch.max(output.data, 1)\n",
+        "        total += target.size(0)\n",
+        "        correct += (predicted == target).sum().item()\n",
+        "\n",
+        "    # Calculate average loss and accuracy for the epoch\n",
+        "    epoch_loss = running_loss / total\n",
+        "    epoch_accuracy = 100 * correct / total\n",
+        "\n",
+        "    return epoch_loss, epoch_accuracy"
+      ],
+      "metadata": {
+        "id": "Ci6qo3A6zbeX"
+      },
+      "execution_count": 15,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#在测试集上评估\n",
+        "def evaluate(model,test_loader,device):\n",
+        "    model.eval()\n",
+        "    correct=0\n",
+        "    total=0\n",
+        "\n",
+        "    with torch.no_grad():\n",
+        "        for data,target in test_loader:\n",
+        "          data,target=data.to(device),target.to(device)\n",
+        "          outputs=model(data)\n",
+        "          _,predicted=torch.max(outputs.data,1)\n",
+        "          total+=target.size(0)\n",
+        "          correct+=(predicted==target).sum().item()\n",
+        "    return 100.*correct/total"
+      ],
+      "metadata": {
+        "id": "ys4gGVg6gokF"
+      },
+      "execution_count": 14,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#training loop\n",
+        "num_epoch=100\n",
+        "\n",
+        "train_losses = []\n",
+        "train_accuracies = []\n",
+        "test_accuracies = []\n",
+        "\n",
+        "for epoch in range(num_epoch):\n",
+        "    print(f\"Epoch {epoch+1}/{num_epoch}\")\n",
+        "\n",
+        "    # Get training loss and accuracy from the modified train_epoch function\n",
+        "    train_loss, train_acc = train_epoch(model,train_loader,optimizer,loss_fn,device)\n",
+        "    test_acc = evaluate(model,test_loader,device)\n",
+        "\n",
+        "    train_losses.append(train_loss)\n",
+        "    train_accuracies.append(train_acc)\n",
+        "    test_accuracies.append(test_acc)\n",
+        "\n",
+        "    print(f\"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Test Acc: {test_acc:.2f}%\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ZCdaBffDiGaw",
+        "outputId": "ff8fbc29-5c4f-415f-84a5-1e2a1b23e0be"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Epoch 1\n",
+            "accuracy:95.30\n",
+            "Epoch 2\n",
+            "accuracy:96.95\n",
+            "Epoch 3\n",
+            "accuracy:97.47\n",
+            "Epoch 4\n",
+            "accuracy:97.41\n",
+            "Epoch 5\n",
+            "accuracy:97.61\n",
+            "Epoch 6\n",
+            "accuracy:97.73\n",
+            "Epoch 7\n",
+            "accuracy:97.69\n",
+            "Epoch 8\n",
+            "accuracy:97.60\n",
+            "Epoch 9\n",
+            "accuracy:97.48\n",
+            "Epoch 10\n",
+            "accuracy:97.70\n",
+            "Epoch 11\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "PeGuLBUzj-BV"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
