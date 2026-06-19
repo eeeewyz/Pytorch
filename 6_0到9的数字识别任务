@@ -1,0 +1,196 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyO/xLP8LzGuvnVK/cptm3rz",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/eeeewyz/Pytorch/blob/main/6_0%E5%88%B09%E7%9A%84%E6%95%B0%E5%AD%97%E8%AF%86%E5%88%AB%E4%BB%BB%E5%8A%A1\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 1,
+      "metadata": {
+        "id": "pqUPc9SchNYj"
+      },
+      "outputs": [],
+      "source": [
+        "import torch\n",
+        "import torch.nn as nn\n",
+        "import torch.optim as optim\n",
+        "import torchvision\n",
+        "import torchvision.transforms as transforms\n",
+        "from torch.utils.data import DataLoader"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 数据预处理\n",
+        "transform = transforms.Compose([\n",
+        "    transforms.ToTensor(),\n",
+        "    transforms.Normalize((0.1307,), (0.3081,))\n",
+        "])"
+      ],
+      "metadata": {
+        "id": "cGM9Z6BziHtJ"
+      },
+      "execution_count": 4,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 加载 MNIST 数据集\n",
+        "train_dataset = torchvision.datasets.MNIST(\n",
+        "    root=\"./data\",\n",
+        "    train=True,\n",
+        "    download=True,\n",
+        "    transform=transform\n",
+        ")\n",
+        "\n",
+        "test_dataset = torchvision.datasets.MNIST(\n",
+        "    root=\"./data\",\n",
+        "    train=False,\n",
+        "    download=True,\n",
+        "    transform=transform\n",
+        ")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "e29P6ICwjDxf",
+        "outputId": "ed1a81d9-55d6-4b00-f613-00d36a59490a"
+      },
+      "execution_count": 5,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "100%|██████████| 9.91M/9.91M [00:05<00:00, 1.86MB/s]\n",
+            "100%|██████████| 28.9k/28.9k [00:00<00:00, 484kB/s]\n",
+            "100%|██████████| 1.65M/1.65M [00:00<00:00, 4.48MB/s]\n",
+            "100%|██████████| 4.54k/4.54k [00:00<00:00, 9.32MB/s]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#create dataset\n",
+        "train_loader=DataLoader(train_dataset,batch_size=32,shuffle=True)\n",
+        "test_loader=DataLoader(test_dataset,batch_size=1000,shuffle=False)"
+      ],
+      "metadata": {
+        "id": "0uzmP1tPjkqi"
+      },
+      "execution_count": 7,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#creat NN\n",
+        "class image_classifier(nn.Module):\n",
+        "    def __init__(self):\n",
+        "        super().__init__()\n",
+        "        self.flatten=nn.Flatten()\n",
+        "        self.layers=nn.Sequential(\n",
+        "            nn.Linear(28*28,128),\n",
+        "            nn.ReLU(),\n",
+        "            nn.Linear(128,10),\n",
+        "        )\n",
+        "\n",
+        "    def forward(self,x):\n",
+        "        x=self.flatten(x)\n",
+        "        x=self.layers(x)\n",
+        "        return x"
+      ],
+      "metadata": {
+        "id": "RxVfK91mshY9"
+      },
+      "execution_count": 8,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#device and optimizer\n",
+        "device=torch.device(\"cuda\" if torch.cuda.is_available() else \"cpu\")\n",
+        "model=image_classifier().to(device)\n",
+        "optimizer=optim.Adam(model.parameters(),lr=0.001)"
+      ],
+      "metadata": {
+        "id": "1L6zMSotseey"
+      },
+      "execution_count": 9,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#创建一个函数进行一个epoch的计算\n",
+        "def train_epoch(model,train_loader,optimizer,loss_fn,device):\n",
+        "    model.train()\n",
+        "    running_loss=0,\n",
+        "    correct=0\n",
+        "    total=0\n",
+        "\n",
+        "    for batch_idx,(data,target) in enumerate(train_loader):\n",
+        "        data,target=data.to(device),target.to(device)\n",
+        "\n",
+        "\n",
+        "        optimizer.zero_grad()\n",
+        "        output=model(data)\n",
+        "        loss=loss_fun(output,target)\n",
+        "        loss.backward()\n",
+        "        optimizer.step()\n",
+        "\n",
+        "\n",
+        "    #track the progress\n",
+        "    running_loss+=loss.item()\n",
+        "    _,predicted=torch.max(output.data,1)\n",
+        "    total+=target.size(0)\n",
+        "    correct+=(predicted==target).sum().item()\n",
+        "\n",
+        "    return running_loss/len(train_loader),100*correct/total"
+      ],
+      "metadata": {
+        "id": "Ci6qo3A6zbeX"
+      },
+      "execution_count": 10,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "ys4gGVg6gokF"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
